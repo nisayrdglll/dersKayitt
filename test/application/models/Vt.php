@@ -1,0 +1,279 @@
+<?php
+
+class Vt extends CI_Model
+{
+
+  public $ogrenci;
+  public $ders;
+   function getOgrenciler($postData){
+      $response = array();
+	  
+     ## Read value
+     $draw = $postData['draw'];
+     $start = $postData['start'];
+     $rowperpage = $postData['length']; // Rows display per page
+     $columnIndex = $postData['order'][0]['column']; // Column index
+     $columnName = $postData['columns'][$columnIndex]['data']; // Column name
+     $columnSortOrder = $postData['order'][0]['dir']; // asc or desc
+     $searchValue = $postData['search']['value']; // Search value
+
+     ## Search 
+     $searchQuery = "";
+     if($searchValue != ''){
+        $searchQuery = " (emp_name like '%".$searchValue."%' or email like '%".$searchValue."%' or city like'%".$searchValue."%' ) ";
+     }
+
+     ## Total number of records without filtering
+     $this->db->select('count(*) as allcount');
+     $records = $this->db->get('ogrenciler')->result();
+     $totalRecords = $records[0]->allcount;
+
+     ## Total number of record with filtering
+     $this->db->select('count(*) as allcount');
+     if($searchQuery != '')
+        $this->db->where($searchQuery);
+     $records = $this->db->get('ogrenciler')->result();
+     $totalRecordwithFilter = $records[0]->allcount;
+
+     ## Fetch records
+     $this->db->select('*');
+     if($searchQuery != '')
+        $this->db->where($searchQuery);
+     $this->db->order_by($columnName, $columnSortOrder);
+     $this->db->limit($rowperpage, $start);
+     $records = $this->db->get('ogrenciler')->result();
+
+     $data = array();
+
+     foreach($records as $record ){
+
+        $data[] = array( 
+           "ogrenciAdi"=>$record->ogrenciAdi,
+           "ogrenciSoyad"=>$record->ogrenciSoyad,
+           "ogrenciNo"=>$record->ogrenciNo,
+           "ogrenciSifre"=>$record->ogrenciSifre,
+           "donem"=>$record->donem
+        ); 
+     }
+
+     ## Response
+     $response = array(
+        "draw" => intval($draw),
+        "iTotalRecords" => $totalRecords,
+        "iTotalDisplayRecords" => $totalRecordwithFilter,
+        "aaData" => $data
+     );
+
+     return $response; 
+   }
+
+
+
+	 
+  function kayitliOgrenciVarMi($ogrenciNO)
+  {
+     $result=$this
+    ->db
+    ->select('*')
+    ->from('ogrenciler') 
+    ->Where('ogrenciNo',$ogrenciNO)
+    ->get()
+    ->row();
+    return $result;
+  }
+  function kayitliDersVarMi($dersKodu)
+  {
+     $sonuc=$this
+     ->db
+     ->select('*')
+     ->from('dersler') 
+     ->Where('dersKodu',$dersKodu)
+     ->get()
+     ->row();
+     return $sonuc;
+  }
+
+    function ogrenciUyeVarMi($kullaniciAdi,$sifre)
+    {
+       $result=$this
+       ->db
+       ->select('*')
+       ->from('ogrenciler') 
+       ->Where('ogrenciNo',$kullaniciAdi)
+       ->where('ogrenciSifre',$sifre)
+       ->get()
+       ->row();
+       return $result;
+    }
+    function adminUyeVarMi($kullaniciAdi,$sifre)
+    {
+       $result=$this
+       ->db
+       ->select('*')
+       ->from('akademisyen') 
+       ->Where('akademisyenSicilNo',$kullaniciAdi)
+       ->where('akademisyenSifresi',$sifre)
+       ->get()
+       ->row();
+       return $result;
+    }
+    function donemDersleriGetir($donem)
+    {
+        $result=$this
+        ->db
+        ->select('*')
+        ->from('dersler') 
+        ->Where('donemDers',$donem)
+        ->get()
+        ->result();
+        return $result;
+
+    }
+    function DersleriGetir()
+    {
+      $result=$this
+      ->db
+      ->select('*')
+      ->from('dersler') 
+      ->get()   
+      ->result();
+      return $result;
+    }
+    function ogrencileriGetir()
+    {
+      $result=$this
+      ->db
+      ->select('*')
+      ->from('ogrenciler') 
+      ->get()
+      ->result();
+      return $result;
+    }
+
+    function dersEkle($where,$data=array())
+    {
+      $result=$this
+      ->db
+      ->insert($where,$data);
+      return $result;
+    }
+
+    function ogrenciEkle($where,$data=array())
+    {
+      $result=$this
+      ->db
+      ->insert($where,$data);
+      return $result;
+    }
+
+    function onaylananDersleriGetir($ogrenciID)
+    {
+		$this->db->distinct();
+		$this->db->select('*');
+        $this->db->from('dersler');
+        $this->db->join('ogrencikayitders', 'dersler.dersID = ogrencikayitders.dersid');
+		$this->db->where('ogrenci_id',$ogrenciID);
+        $query = $this->db->get();
+        return $query->result();
+    }
+    
+    function secilenDersiEkle($where,$ders_id)
+     {
+        $result=$this
+        ->db
+        ->insert($where,$ders_id);
+       return $result;
+     }
+     function akademisyenDersleriOnaylama($where,$data)
+    {
+       $result=$this
+       ->db
+       ->insert($where,$data);
+       return $result;
+    }
+    function ogrencisecilenDersleriGetir()
+    {
+     $result=$this
+     ->db
+     ->select('*')
+     ->from('secilendersler') 
+     ->get()
+     ->result();
+     return $result;
+   }
+    function ogrencininOnayladigiDersiSil($ogrenciId)
+    {
+     $result=$this->db->delete('secilendersler', array('ogrenci_id' => $ogrenciId));
+     return $result;
+   }
+   
+   
+   
+      function getDersler($postData=null){
+      $response = array();
+	   $draw = $postData['draw'];
+     $start = $postData['start'];
+     $rowperpage = $postData['length']; // Rows display per page
+     $columnIndex = $postData['order'][0]['column']; // Column index
+     $columnName = $postData['columns'][$columnIndex]['data']; // Column name
+     $columnSortOrder = $postData['order'][0]['dir']; // asc or desc
+     $searchValue = $postData['search']['value']; // Search value
+	  $searchQuery = "";
+        if($searchValue != ''){
+         $searchQuery = " (dersKodu like '%".$searchValue."%' or dersAdi like '%".$searchValue."%' or dersSaati like'%".$searchValue."%'
+         or dersKredisi like '%".$searchValue."%'or derslik like '%".$searchValue."%'or ogretimUyesi like '%".$searchValue."%'
+         or dersGunu like '%".$searchValue."%'or donemDers like '%".$searchValue."%') ";
+         }
+
+    
+
+     ## Total number of records without filtering
+     $this->db->select('count(*) as allcount');
+     $records = $this->db->get('dersler')->result();
+     $totalRecords = $records[0]->allcount;
+
+     ## Total number of record with filtering
+     $this->db->select('count(*) as allcount');
+     if($searchQuery != '')
+        $this->db->where($searchQuery);
+     $records = $this->db->get('dersler')->result();
+     $totalRecordwithFilter = $records[0]->allcount;
+
+     ## Fetch records
+     $this->db->select('*');
+     if($searchQuery != '')
+        $this->db->where($searchQuery);
+     $this->db->order_by($columnName, $columnSortOrder);
+     $this->db->limit($rowperpage, $start);
+     $records = $this->db->get('dersler')->result();
+
+     $data = array();
+
+     foreach($records as $record ){
+
+        $data[] = array( 
+           "dersKodu"=>$record->dersKodu,
+           "dersAdi"=>$record->dersAdi,
+           "dersSaati"=>$record->dersSaati,
+           "dersKredisi"=>$record->dersKredisi,
+           "derslik"=>$record->derslik,
+		   "ogretimUyesi"=>$record->ogretimUyesi,
+		   "dersGunu"=>$record->dersGunu,
+		   "donemDers"=>$record->donemDers,
+		   
+        ); 
+     }
+
+     ## Response
+     $response = array(
+        "draw" => intval($draw),
+        "iTotalRecords" => $totalRecords,
+        "iTotalDisplayRecords" => $totalRecordwithFilter,
+        "aaData" => $data
+     );
+      return $response;
+      
+   }
+
+}
+?>
